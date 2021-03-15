@@ -25,27 +25,23 @@ testmat = scipy.io.loadmat('data/test.mat')
 X_train = np.transpose(np.array(trainmat['trainxdata']),axes=(2,0,1))
 y_train = np.array(trainmat['traindata']).T
 
-# Creates an LSTM network. For each input tensor into an LSTM unit
-# that tensor would have 320 values to process
-# and the output of that LSTM unit would be a tensor with 320 values
+# LSTM(input_dim, output_dim, return_sequences)
+# input_dim - specifies # of values in the input tensor
+# output_dim - specifies # of values in the output tensor
+# return_sequences - If True, saves all outputs(hidden_states) as LSTM
+#                    is ran through time series data, not just last output
 # But what dictates how many unrolled LSTM units there will be, or really how
 # much time series input data there will be? (maybe when you model.add the lstm layer, keras will figure this out?)
-# By saying return_sequences=True, you say that we want to save the outputs
-# of all LSTM inputs in the time series, not just the last output
-# So for every input in the time series data, there will be an output
-# that is the generated hidden state from that input after running it through all the gates
-# in the lstm. return sequences essentially asks if we want to return the hidden state
-# from each individual input or just the last of these states.
 forward_lstm = LSTM(input_dim=320, output_dim=320, return_sequences=True)
 # Same LSTM unit as forward_lstm
 backward_lstm = LSTM(input_dim=320, output_dim=320, return_sequences=True)
-# Creates a Bidirectional layer with the forward layer(going in one direction on the input)
-# being the forward_lstm and the backward layer being the backward LSTM
-# we also specificfy that in this layer we want the output after each input in the time series data
-# not just the last output, by doing return_sequences = true
-# How is each output decided? -> how are the outputs of forward layer and backward layer merged?
-# Answer: because they did not specify merge_mode, the outputs of the forward and backward
-# layers are not combined but rather both the outputs are returned by this layer
+
+# Bidirectional(forward, backward, return_sequences)
+# forward - specify forward layer
+# backward - specify backward layer
+# return_sequences - for both layers, save all outputs, not just last output
+# Note: by not specifying merge_mode, this layer does not combine the outputs of each layer.
+#   Rather, they are returned seperatly.
 brnn = Bidirectional(forward=forward_lstm, backward=backward_lstm, return_sequences=True)
 
 print 'building model'
@@ -119,15 +115,56 @@ model.add(Dense(input_dim=925, output_dim=919))
 model.add(Activation('sigmoid'))
 
 print 'compiling model'
+# compile() requires you to specify important parameters that Keras needs to train your model
+# loss -> here you specify the type of loss function
+#    Binary cross entropy: for all x in output [-(p(x) * log q(x)) + (1-p(x))*log(1-q(x))]
+#    Explanation: p(x) here is the expected value(either 0 or 1), q(x) is the predicted value
+#    If p(x) is 1 then only -(p(x) * log q(x)) is evaluated -> if q(x) is larger(closer to 1), this gives a
+#    more negative error and thus the loss is lower, and if q(x) is smaller, it gives less negative value
+#    and thus a higher error.
+#    If p(x) is 0 then only (1-p(x))*log(1-q(x)) -> similar logic as above applies here
+#   Other loss functions: CategoricalCrossEntropy, kl_divergence, etc
+# optimizer -> we specify algorithm to use to change the weights of our network based on given loss
+#   Question: How do we decide for a model which optimization algorithm to use? Is there any rigourous methods we can use?
+# class_mode -> specifies format of expected output. Here it is binary, meaning expected output is a 1d array of
+#  a lot of 0's and a 1.
 model.compile(loss='binary_crossentropy', optimizer='rmsprop', class_mode="binary")
 
 print 'running at most 60 epochs'
 
+# ModelCheckpoint tells Keras to, at various iterations throughout training, save the models current weights
+# into a specified file.
+# filepath  - specifies file path to save the weights to
+# verbose   - specifies how to output to terminal at each epoch of training
+# save_best_only - tells keras to only save weights of current model if the model is doing better
+#                   than previously saved model
 checkpointer = ModelCheckpoint(filepath="DanQ_bestmodel.hdf5", verbose=1, save_best_only=True)
+# Tells model to stop training once val_loss has stopped going down for 5 epochs
+# monitor - specifies what metric to look at for stagnated improvement
+# patience - specifies number of epochs in which, if metric doesn't improve over, model training should stop
+# verbose - same as ModelCheckpoint
 earlystopper = EarlyStopping(monitor='val_loss', patience=5, verbose=1)
 
+# Trains the model, with training input data being X_train, and training output data being y_train, over
+# 60 epochs, where after each epoch we should run the validation data on the model, calculate validation loss (val_loss)
+# and when this stops improving, we should stop training.
+# Parameter Explanation:
+# x - numpy array representing inputs of training data
+# y - numpy array representing expected output associated to each input in x
+# batch_size - specifies how many samples(i.e input, output pairs) to individually go through
+#              and calculate the losses(difference between our networks output and expected output)
+#              before we combine those losses into a set of gradients used to update each weight in our network.
+# nb_epoch - Number of epochs to go through
+# shuffle - This randomly rearranges the input x before each epoch - useful as it prevents overfitting as inputs
+#           are always seen in different order so the weights aren't updated in repeated same ways
+# show_accuracy - if True, outputs accuracy after each epoch
+# validation_data - after each epoch, we can specify data on which the model has not been trained on and can
+#                    thus be used as a measure of how well the model may perform in real world.
+# call_backs - specifies stuff Keras should repeatidly run/check for after each epoch
 model.fit(X_train, y_train, batch_size=100, nb_epoch=60, shuffle=True, show_accuracy=True, validation_data=(np.transpose(validmat['validxdata'],axes=(0,2,1)), validmat['validdata']), callbacks=[checkpointer,earlystopper])
 
+# evaluate(x, y, True) tells Keras to run trained model on the test data x and y and return
+# a dictionary repesenting the results of the train
 tresults = model.evaluate(np.transpose(testmat['testxdata'],axes=(0,2,1)), testmat['testdata'],show_accuracy=True, return_dict=True)
 
 print tresults
