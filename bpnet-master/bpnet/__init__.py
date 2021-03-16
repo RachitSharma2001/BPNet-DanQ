@@ -1,5 +1,5 @@
-from __future__ import absolute_import
-
+from __future__ import absolute_import # ????
+# Runs this file at beginning of importing module
 __author__ = 'Ziga Avsec'
 __email__ = 'avsec@in.tum.de'
 __version__ = '0.0.23'

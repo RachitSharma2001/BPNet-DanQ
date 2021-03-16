@@ -20,6 +20,9 @@ def ipynb_render(input_ipynb, output_ipynb, params=""):
 
 
 def main():
+    # connects all the functions to command line arguments
+    # Note that bpnet_train is added as a command but is used by calling train because
+    # it was named "train" in trian.py in folder cli
     parser = argh.ArghParser()
     parser.add_commands([
         # available commands

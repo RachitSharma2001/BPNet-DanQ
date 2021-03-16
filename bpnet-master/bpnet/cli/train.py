@@ -7,7 +7,7 @@ import sys
 import os
 import yaml
 import shutil
-from argh.decorators import named, arg
+from argh.decorators import named, arg # For CLI
 from uuid import uuid4
 import numpy as np
 from tqdm import tqdm
@@ -519,7 +519,9 @@ def _get_gin_files(premade, config):
         raise ValueError("Please specify at least one of the two: --premade or --config")
     return gin_files
 
-
+# Decorators used for argh, a command line argument library 
+# args with -- indicate that they are optional
+# help can be used to specify what is displayed if you run python3 train.py train --help
 @named('train')
 @arg('dataspec',
      help='dataspec.yaml file')
