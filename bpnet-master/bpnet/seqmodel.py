@@ -1,5 +1,10 @@
 """Sequence model
 """
+
+# This whole class is the generic framework that builds upon keras's methods
+# Why did they make their own generic framework? -> What is different about this than just using
+# keras methods to define the specific bpnet? -> They seem to have heads, body or something
+
 from tqdm import tqdm
 import os
 import tensorflow as tf
@@ -75,6 +80,7 @@ class SeqModel:
                 self.loss_weights.append(head.loss_weight)
 
         # create and compile the model
+        # Notice here how they build off keras's frametwork -> Model() is a keras function, so is .compile()
         self.model = Model([inp] + bias_inputs, outputs)
         self.model.compile(optimizer=optimizer,
                            loss=self.losses, loss_weights=self.loss_weights)
@@ -272,10 +278,15 @@ class SeqModel:
         if not isinstance(seq, dict) and not isinstance(seq, list) and len(self.model.inputs) > 1:
             seq = {'seq': seq, **self.neutral_bias_inputs(len(seq), seqlen=seq.shape[1])}
 
+        # both predict and predict on batch returns a numpy array, where np_arr[position in seq] represents likeliness that given tf
+        # binds to that position or something
         if batch_size is None:
             preds = self.model.predict_on_batch(seq)
         else:
             preds = self.model.predict(seq, batch_size=batch_size)
+
+        # So this takes preds, which is a numpy array, and interprets it so that a dictionary is returned
+        # What are the key->value pairs of this dictionary?
         return {k: postproc_fn(v) if postproc_fn is not None else v
                 for k, v, postproc_fn in zip(self.target_names, preds, self.postproc_fns)}
 
