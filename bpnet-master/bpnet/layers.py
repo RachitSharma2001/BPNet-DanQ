@@ -87,7 +87,7 @@ class FCN:
         x = kl.Dense(self.n_tasks)(x)
         return x
 
-
+# Set this through your config file
 @gin.configurable
 class DilatedConv1D:
     """Dillated convolutional layers
@@ -110,13 +110,15 @@ class DilatedConv1D:
         self.batchnorm = batchnorm
         self.add_pointwise = add_pointwise
 
+    # Dilated Conv 1D can behave as a function using this method
     def __call__(self, inp):
         """inp = (None, 4)
         """
         first_conv = kl.Conv1D(self.filters,
                                kernel_size=self.conv1_kernel_size,
-                               padding='same',
+                               padding='same', # Padding added so output size = input size
                                activation='relu')(inp)
+        # pointwise: option to add a 1by1 conv right after the first conv 
         if self.add_pointwise:
             if self.batchnorm:
                 first_conv = kl.BatchNormalization()(first_conv)
@@ -127,25 +129,44 @@ class DilatedConv1D:
 
         prev_layer = first_conv
         for i in range(1, self.n_dil_layers + 1):
-            if self.batchnorm:
+            
+
+            if self.batchnorm: # Helps with exploding gradient problem
                 x = kl.BatchNormalization()(prev_layer)
+                """
+                Batchnorm
+                1) Normalizes data: z = (x - m) / s
+                m: mean
+                s: new range length
+                2) Multiplies then add by two separate trainable parameters
+                output = (g * z) + b
+                """
             else:
                 x = prev_layer
+            
+            # Add next conv layer
             conv_output = kl.Conv1D(self.filters, kernel_size=3, padding='same',
-                                    activation='relu', dilation_rate=2**i)(x)
+                                    activation='relu', dilation_rate=2**i
+                                    # pass in dilation rate 2, 4, 8 ...
+                                    )(x)
+            # ?? There would be a lot of padding in the higher level layers when
+            # dilation rate is something like 2 ^ 7 
 
             # skip connections
-            if self.skip_type is None:
+            if self.skip_type is None: # no skips
                 prev_layer = conv_output
             elif self.skip_type == 'residual':
+                # Adds cell by cell since prev_layer and conv_output have same dimensions
                 prev_layer = kl.add([prev_layer, conv_output])
             elif self.skip_type == 'dense':
+                # Appends tensors from conv_output with tensors from prev_layer
                 prev_layer = kl.concatenate([prev_layer, conv_output])
             else:
                 raise ValueError("skip_type needs to be 'add' or 'concat' or None")
 
         combined_conv = prev_layer
-
+        
+        # ?? What is happening here
         if self.padding == 'valid':
             # Trim the output to only valid sizes
             # (e.g. essentially doing valid padding with skip-connections)
