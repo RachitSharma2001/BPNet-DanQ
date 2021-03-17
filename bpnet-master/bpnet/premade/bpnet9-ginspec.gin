@@ -57,7 +57,7 @@ ProfileHead.loss_weight = 1
 ProfileHead.postproc_fn = @softmax
 ProfileHead.use_bias = %use_bias
 ProfileHead.bias_input = 'bias/{task}/profile'
-ProfileHead.bias_shape = (None, %n_bias_tracks)
+ProfileHead.bias_shape = (None, %n_bias_tracks) # None because it depends on seq length
 ProfileHead.bias_net = @MovingAverages()
 MovingAverages.window_sizes = [1, 50]
 

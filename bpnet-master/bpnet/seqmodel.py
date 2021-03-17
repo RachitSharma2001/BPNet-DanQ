@@ -53,35 +53,41 @@ class SeqModel:
         self.heads = heads
         self.seqlen = seqlen
 
+        # Input shape is seqlen x 4 (one hot encoded) by default
         if input_shape is None:
             input_shape = (self.seqlen, 4)
-        inp = kl.Input(shape=input_shape, name=input_name)
-        bottleneck = body(inp)
+        inp = kl.Input(shape=input_shape, name=input_name) # input_name = "seq"
+        bottleneck = body(inp) # DilatedConv1D(input)
         self.bottleneck_name = bottleneck.name  # remember the bottleneck tensor name
 
         # create different heads
         outputs = []
-        self.all_heads = defaultdict(list)
+        self.all_heads = defaultdict(list) # Sets it so that if all_heads["key"] DNE
+        # it sets all_heads["key"] to an empty list and returns the empty list
         self.losses = []
         self.loss_weights = []
         self.target_names = []
         self.postproc_fns = []
         bias_inputs = []
-        for task in tasks:
-            for head in heads:
+        for task in tasks: # ['Oct4', 'Sox2', 'Nanog', 'Klf4']
+            for head in heads: # [ProfileHead(), ScalarHead()]
                 head = head.copy()
-                self.all_heads[task].append(head)
+                self.all_heads[task].append(head) # Add head to all_heads dict
                 out, bias_input = head(bottleneck, task)
-                outputs.append(out)
-                bias_inputs += bias_input
-                self.target_names.append(head.get_target(task))
-                self.postproc_fns.append(head.postproc_fn)
-                self.losses.append(head.loss)
+                outputs.append(out) # Hold reference to output head
+                bias_inputs += bias_input # Store reference to control data inputs
+                self.target_names.append(head.get_target(task)) # Store name of this head
+                self.postproc_fns.append(head.postproc_fn) 
+                # Specified as softmax for ProfileHead in gin so values sum to 1 as a probability profile
+                self.losses.append(head.loss) # multinomial log negative likelihood in gin file
                 self.loss_weights.append(head.loss_weight)
 
         # create and compile the model
         # Notice here how they build off keras's frametwork -> Model() is a keras function, so is .compile()
         self.model = Model([inp] + bias_inputs, outputs)
+
+        # Configure optimizer, loss, and 
+        # loss_weights: weighting each of the 8 output heads
         self.model.compile(optimizer=optimizer,
                            loss=self.losses, loss_weights=self.loss_weights)
 

@@ -8,7 +8,7 @@ import tensorflow as tf
 import keras.layers as kl
 import gin
 import os
-import abc
+import abc # For abstract base classes
 
 
 class BaseHead:
@@ -19,7 +19,7 @@ class BaseHead:
     # name -> name of the module
     # _model -> gets setup in the init
 
-    @abc.abstractmethod
+    @abc.abstractmethod # Implements
     def get_target(self, task):
         pass
 
@@ -76,7 +76,7 @@ class BaseHeadWBias(BaseHead):
 def id_fn(x):
     return x
 
-
+# Names layer object
 def named_tensor(x, name):
     return kl.Lambda(id_fn, name=name)(x)
 
@@ -84,6 +84,7 @@ def named_tensor(x, name):
 # --------------------------------------------
 # Head implementations
 
+# Head for read count
 @gin.configurable
 class ScalarHead(BaseHeadWBias):
 
@@ -124,6 +125,7 @@ class ScalarHead(BaseHeadWBias):
         # add the target bias
         if self.use_bias:
             binp = kl.Input(self.bias_shape, name=self.get_bias_input(task))
+            # ?? Why is binp wrapped in a list before being passed back
             bias_inputs = [binp]
 
             # add the bias term
@@ -220,7 +222,10 @@ class BinaryClassificationHead(ScalarHead):
 
         # TODO - mabye override the way we call outputs?
 
-
+# Head for profile shape
+# When used as a fxn returns two things: 
+# 1. reference to the layers that will output 
+# 2. reference to where to place control data
 @gin.configurable
 class ProfileHead(BaseHeadWBias):
     """Deals with the case where the output are multiple tracks of
@@ -257,16 +262,21 @@ class ProfileHead(BaseHeadWBias):
         self.bias_shape = bias_shape
 
     def get_target(self, task):
+        """
+        ProfileHead.target_name = '{task}/profile' in bpnet9.gin
+        """
         return self.target_name.format(task=task)
 
     def __call__(self, inp, task):
-        o = self.net(inp)
+        o = self.net(inp) # Example: DeConv1D(inp)
 
         # remember the tensors useful for interpretation (referred by name)
         self.pre_act = o.name
 
         # add the target bias
         if self.use_bias:
+            # self.bias_shape = (None, %n_bias_tracks) = (0, 2) in bpnet9.gin
+            # name examples: "bias/Nanog/profile" or "bias/Klf4/counts"
             binp = kl.Input(self.bias_shape, name=self.get_bias_input(task))
             bias_inputs = [binp]
 
@@ -278,18 +288,21 @@ class ProfileHead(BaseHeadWBias):
             else:
                 # Don't use the nn 'bias' so that when the measurement bias = 0,
                 # this term vanishes
+                # Looks like it defaults to a simple conv net with kernel size 1 if no 
+                # bias nn is specified??? 
                 bias_x = kl.Conv1D(1, kernel_size=1, use_bias=False)(binp)
-            o = kl.add([o, bias_x])
+            o = kl.add([o, bias_x]) # Add bias_x with the predicted o cell by cell
         else:
             bias_inputs = []
-
+        
+        # Pass through the activation function
         if self.activation is not None:
             if isinstance(self.activation, str):
                 o = kl.Activation(self.activation)(o)
             else:
                 o = self.activation(o)
 
-        self.post_act = o.name
+        self.post_act = o.name # Save the name of the layer post activation
 
         # label the target op so that we can use a dictionary of targets
         # to train the model
@@ -371,6 +384,8 @@ class ProfileHead(BaseHeadWBias):
     #     return self.intp_tensors()[which]
 
     def get_bias_input(self, task):
+        # Just formats string further
+        # 'bias/{task}/profile', task = "Nanog" ----> "bias/Nanog/profile"
         return self.bias_input.format(task=task)
 
     def neutral_bias_input(self, task, length, seqlen):
