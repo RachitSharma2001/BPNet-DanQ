@@ -35,7 +35,7 @@ class BPNetSeqModel:
     """
 
     def __init__(self, seqmodel, fasta_file=None):
-        self.seqmodel = seqmodel
+        self.seqmodel = seqmodel # This is an object defined in seqmodel.py
         self.tasks = self.seqmodel.tasks
         self.fasta_file = fasta_file
         assert isinstance(self.seqmodel, SeqModel)

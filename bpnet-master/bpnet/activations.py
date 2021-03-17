@@ -9,10 +9,13 @@ import gin
 
 @gin.configurable
 def clipped_exp(x, min_value=-50, max_value=50):
+    # Creating lambda function that takes in x, min_value and max_value, 
+    # Clips values to be in between min and max, then pass through exponential
     return kl.Lambda(lambda x, min_value, max_value: K.exp(K.clip(x, min_value, max_value)),
                      arguments={"min_value": min_value, "max_value": max_value})(x)
 
 
+# ?? Why is this gin.configurable? 
 @gin.configurable
 def softmax_2(x):
     """
