@@ -44,11 +44,10 @@ contrib_score_all -> compute contribution scores over the input
 General lessons/questions:
 What does sim_pred do?
 What is the convienince of having seqmodel?
-    My guess: Seqmodel seems to involve headers, bodies, etc -> things that aren't included in Keras
-    So maybe they created seqmodel in order to create a more dynamic machine learning model than Keras
-    that can has a convinient structure for our specific problem(which involves input representation, feature extraction methods, etc)
-    -> BPNet.py would be too large and complex
-    if we tried defining the structure here?
+    My guess: BPNet needs a specific type of model that Keras doesn't offer -> one that involves a ml model "body"(hence the body)
+    and 4 output "heads" associated to each TF/Task. Hence they built off Keras to make a generic framework better suited for their
+    problem, to make a more dynamic machine learning model than what Keras had.
+    -> BPNet.py would be too large and complex if they tried defining the structure here?
 
 General theme of this class:
     Create an instance of the specific architecture seqmodel, and take in the input sequences, and return

@@ -24,9 +24,22 @@ logger = logging.getLogger(__name__)
 logger.addHandler(logging.NullHandler())
 
 '''
+Questions: How can the keras method Model() just take in keras tensors and know which model to create for those input tensors and outputs?
+
 General structure of this class:
 Main Theme: build off Keras's models to create a generic framework/version of a Keras model
-for this specific problem(where they add heads, bodies, tasks,etc). Creates a general organizational structure
+for this specific problem:
+    model - neural network model, which consists of 1 CNN and 9 dilated CNNs
+    body - takes input sequence, runs it through model, and hands output to the 4 output heads
+        output represents features extracted from input DNA
+    head - 4 heads, each associated to a TF/task. Takes features extracted by body, predict binding sites for its associated TF,
+    computes loss
+    tasks - The different TFs
+
+
+    (creating the model, creating the body which takes input runs it thorugh model and gives output to heads,
+the 4 heads which take body output representing extracted features and use it to predict binding spots for their specific tf).
+Creates a general organizational structure
 which organizes everything BPNet.py will need to solve the specific problem.
 
 They have all these different functions that are used in BPNet.py: predict, contrib_score, contrib_score_all,
@@ -81,6 +94,7 @@ class SeqModel:
         self.bottleneck_name = bottleneck.name  # remember the bottleneck tensor name
 
         # create different heads
+        # Notice what makes up heads - heads compute loss for each of the different transcription factors
         outputs = []
         self.all_heads = defaultdict(list)
         self.losses = []
@@ -149,6 +163,8 @@ class SeqModel:
                     intp_targets.append((head.get_target(task) + "/" + k, v))
         return intp_targets
 
+    # Use deeplift method to calculate contribution scores -> method described in page 30 of BPNet paper
+    # Contribution scores help us identify motifs by showing which parts of DNA "contributed" most to output
     def _contrib_deeplift_fn(self, x, name, preact_only=True):
         """Deeplift contribution score tensors
         """
@@ -199,6 +215,7 @@ class SeqModel:
 
         return self.contrib_fns[k]
 
+    # Use grad method to calculate contribution scores
     def _contrib_grad_fn(self, x, name, preact_only=True):
         """Gradient contribution score tensors
         """
@@ -235,6 +252,7 @@ class SeqModel:
 
         return self.contrib_fns[k]
 
+    # Computes a contribution score for a feature attribution method - either deeplift or grad(?)
     def contrib_score(self, x, name, method='grad', batch_size=512, preact_only=False):
         """Compute the contribution score
 
@@ -248,6 +266,7 @@ class SeqModel:
             seqlen = x.shape[1]
             x = {'seq': x, **self.neutral_bias_inputs(len(x), seqlen=seqlen)}
 
+        # Notice here they call either of the two functions above
         if method == "deeplift":
             fn = self._contrib_deeplift_fn(x, name, preact_only=preact_only)
         elif method == "grad":
