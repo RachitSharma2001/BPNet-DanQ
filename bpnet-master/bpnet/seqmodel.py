@@ -38,12 +38,10 @@ class SeqModel:
                  input_name='seq'
                  ):
         """
-
         Args:
           seqlen: Explicit input sequence length
         Note: heads or body should work like parametrized functions building
         up a functional Keras model
-
         1. build the keras model (don't )
         2. compile the Keras model
         """
@@ -77,7 +75,7 @@ class SeqModel:
                 outputs.append(out) # Hold reference to output head
                 bias_inputs += bias_input # Store reference to control data inputs
                 self.target_names.append(head.get_target(task)) # Store name of this head
-                self.postproc_fns.append(head.postproc_fn) 
+                self.postproc_fns.append(head.postproc_fn)
                 # Specified as softmax for ProfileHead in gin so values sum to 1 as a probability profile
                 self.losses.append(head.loss) # multinomial log negative likelihood in gin file
                 self.loss_weights.append(head.loss_weight)
@@ -86,7 +84,7 @@ class SeqModel:
         # Notice here how they build off keras's frametwork -> Model() is a keras function, so is .compile()
         self.model = Model([inp] + bias_inputs, outputs)
 
-        # Configure optimizer, loss, and 
+        # Configure optimizer, loss, and
         # loss_weights: weighting each of the 8 output heads
         self.model.compile(optimizer=optimizer,
                            loss=self.losses, loss_weights=self.loss_weights)
@@ -222,7 +220,6 @@ class SeqModel:
 
     def contrib_score(self, x, name, method='grad', batch_size=512, preact_only=False):
         """Compute the contribution score
-
         Args:
           x: one-hot encoded DNA sequence
           name: which interepretation method to compute
@@ -259,13 +256,11 @@ class SeqModel:
     def contrib_score_all(self, seq, method='grad', batch_size=512, preact_only=True,
                           intp_pattern='*'):
         """Compute all contribution scores
-
         Args:
           seq: one-hot encoded DNA sequences
           method: 'grad' or deeplift'
           aggregate_strands: if True, the average contribution scores across strands will be returned
           batch_size: batch size when computing the contribution scores
-
         Returns:
           dictionary with keys: {task}/{head}/{interpretation_tensor}
           and values with the same shape as `seq` corresponding to contribution scores

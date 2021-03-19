@@ -5,6 +5,7 @@
 # Why did they make their own generic framework? -> What is different about this than just using
 # keras methods to define the specific bpnet? -> They seem to have heads, body or something
 
+
 from tqdm import tqdm
 import os
 import tensorflow as tf
@@ -22,7 +23,25 @@ import logging
 logger = logging.getLogger(__name__)
 logger.addHandler(logging.NullHandler())
 
+'''
+General structure of this class:
+Main Theme: build off Keras's models to create a generic framework/version of a Keras model
+for this specific problem(where they add heads, bodies, tasks,etc). Creates a general organizational structure
+which organizes everything BPNet.py will need to solve the specific problem.
 
+They have all these different functions that are used in BPNet.py: predict, contrib_score, contrib_score_all,
+they also have other methods like: _contrib_deeplift_fn, _contrib_grad_fn, evaluate,
+It seems like this what this class does is define a generic framework over all parts of the whole problem:
+Input Handling: _get_input_tensor, neutral_bias_inputs, etc
+Head stuff: in init
+Body stuff: in init
+Model stuff: predict, predict_all
+Output stuff: contrib_score, contrib_score_all
+Testing on validation data: evaluate
+Feature extraction stuff: _contrib_deeplift_fn, _contrib_grad_fn
+
+And then BPNet.py uses a lot of these methods for its specific case -> specific input file, specific hyperparameters, etc
+'''
 class SeqModel:
     """Model interpreting the genome sequence
     """
@@ -47,6 +66,8 @@ class SeqModel:
         1. build the keras model (don't )
         2. compile the Keras model
         """
+
+        # Here they create the body's and heads model using keras library stuff
         import keras.layers as kl
         self.body = body
         self.tasks = tasks
