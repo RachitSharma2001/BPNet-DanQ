@@ -36,24 +36,23 @@ for this specific problem:
     computes loss
     tasks - The different TFs
 
+Breakdown of the functions of this class:
+init - initializes the 4 output heads, the body, the pure model(10 cnns + fc layer(s))
+_get_input_tensor, get_bottleneck_tensor, bottleneck_model, preact_model, predict_preact, neutral_bias_inputs, get_intp_tensors - helper functions
+_contrib_deeplift_fn - takes in an input sequence and TF, and then runs them through the model to get the output(raw signal) associated
+    to that TF, then uses deepexplains
+    deeplift method(which in general takes raw signals associated to outputs and derives contribution scores of each element of input)
+    to calculate contribution score array
+_contrib_grad_fn - same as above but uses GRAD-CAM method rather than DeepLift
+contrib_score - method that takes in a TF(specified by name parameter) and contribution scoring method, and calls either
+    of the two above methods to get the contribution score array for that TF
+contrib_score_all - general method that an instance of seqmodel(like BPNet.py) could call.
+    Method takes in an input sequence and a contribution score calculation method
+    It goes through, for each of the TFs, and calls contrib_score on the sequence for that TF.
+    contrib_score returns an array. This method returns a dictionary mapping TFs to the associated contribution score array
+predict - takes an input sequence and runs it through the model to get the raw output signal associated to the input sequence
 
-    (creating the model, creating the body which takes input runs it thorugh model and gives output to heads,
-the 4 heads which take body output representing extracted features and use it to predict binding spots for their specific tf).
-Creates a general organizational structure
-which organizes everything BPNet.py will need to solve the specific problem.
-
-They have all these different functions that are used in BPNet.py: predict, contrib_score, contrib_score_all,
-they also have other methods like: _contrib_deeplift_fn, _contrib_grad_fn, evaluate,
-It seems like this what this class does is define a generic framework over all parts of the whole problem:
-Input Handling: _get_input_tensor, neutral_bias_inputs, etc
-Head stuff: in init
-Body stuff: in init
-Model stuff: predict, predict_all
-Output stuff: contrib_score, contrib_score_all
-Testing on validation data: evaluate
-Feature extraction stuff: _contrib_deeplift_fn, _contrib_grad_fn
-
-And then BPNet.py uses a lot of these methods for its specific case -> specific input file, specific hyperparameters, etc
+BPNet.py is an instance of seqmodel, uses it for its own specificities -> specific input file, specific hyperparameters, etc
 '''
 class SeqModel:
     """Model interpreting the genome sequence
@@ -164,7 +163,7 @@ class SeqModel:
         return intp_targets
 
     # Use deeplift method to calculate contribution scores -> method described in page 30 of BPNet paper
-    # Contribution scores help us identify motifs by showing which parts of DNA "contributed" most to output
+    # Contribution scores are used by TF-Modisco to extract motifs from sequence.
     def _contrib_deeplift_fn(self, x, name, preact_only=True):
         """Deeplift contribution score tensors
         """
@@ -182,12 +181,13 @@ class SeqModel:
         import tempfile
 
         self.contrib_fns = {}
+        # ----- Get the input sequence ---------
         with tempfile.NamedTemporaryFile(suffix='.pkl') as temp:
             self.model.save(temp.name)
             K.clear_session()
             self.model = load_model(temp.name)
 
-        # get the interpretation tensors
+        # get the interpretation tensors -> What are these?
         intp_names, intp_tensors = list(zip(*self.get_intp_tensors(preact_only)))
         if name not in intp_names:
             raise ValueError(f"name {name} not in intp_names: {intp_names}")
@@ -201,11 +201,18 @@ class SeqModel:
         else:
             x_subset = x[:1]
 
+        # This specifically implements the process in Figure B on page 6 of BPNet paper
+        # It takes the input sequence, runs it through the model to get the raw output
+        # which is stores in target_tensors
+        # Then it feeds the target tensor into deeplift to get a numpy array where contribution scores
+        # of each nucleotide in the input sequence are stored in the corresponding position/index
         with deepexplain.tensorflow.DeepExplain(session=K.get_session()) as de:
             fModel = Model(inputs=input_tensor, outputs=intp_tensors)
             target_tensors = fModel(input_tensor)
             for name, target_tensor in zip(intp_names, target_tensors):
                 # input_tensor = fModel.inputs[0]
+                # Convert the raw signal associated to the given TF and input
+                # through deeplift to get contribution scores of each nucleotide in original sequence.
                 self.contrib_fns["deeplift/" + name] = de.explain('deeplift',
                                                                   target_tensor,
                                                                   # NOTE: deepexplain will always take
@@ -215,7 +222,7 @@ class SeqModel:
 
         return self.contrib_fns[k]
 
-    # Use grad method to calculate contribution scores
+    # Use grad method to calculate contribution scores(same code as above but specifies grad rather than deeplift to deepexplain)
     def _contrib_grad_fn(self, x, name, preact_only=True):
         """Gradient contribution score tensors
         """
@@ -252,7 +259,7 @@ class SeqModel:
 
         return self.contrib_fns[k]
 
-    # Computes a contribution score for a feature attribution method - either deeplift or grad(?)
+    # Computes a contribution score array for a signal-to-contribution_scores method - either deeplift or GRAD-CAM
     def contrib_score(self, x, name, method='grad', batch_size=512, preact_only=False):
         """Compute the contribution score
 
