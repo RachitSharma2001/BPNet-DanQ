@@ -8,6 +8,16 @@ import bpnet.losses as blosses
 import gin
 import keras
 
+'''
+seqmodel.py - defines the generic BPNet framework that builds off Keras models
+    Defines the body, head structure but does not define any of the specific architecture(meaning specific neural networks)
+BPNet.py - has an attribute self.seqmodel which it then uses in all of its predict methods: in each of the predict
+    methods it runs output = self.seqmodel(input)
+
+this class: Defines the specific architecture of BPNet.py's self.seqmodel attribute
+    Defines the 10 convolutional layers of the body, the deconvolutional + fully connected layers of the heads.
+'''
+
 
 # TODO - setup the following model as a simple bpnet (?)
 

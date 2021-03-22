@@ -13,6 +13,7 @@ from pathlib import Path
 from bpnet.utils import write_pkl, render_ipynb, remove_exists, add_file_logging, create_tf_session, pd_first_cols
 from bpnet.cli.contrib import ContribFile
 from bpnet.cli.train import _get_gin_files, log_gin_config
+# Pretty big
 from bpnet.modisco.files import ModiscoFile
 from bpnet.utils import write_json, read_json
 import gin
@@ -21,6 +22,15 @@ import inspect
 filename = inspect.getframeinfo(inspect.currentframe()).filename
 this_path = os.path.dirname(os.path.abspath(filename))
 
+'''My Guess is that this file runs all the steps of TF Modsico:
+1) Taking contribution scores for a Tf on input DNA sequence
+2) Finding seqlets of highest contribution scores
+3) Clustering seqlets
+4) Creating CWMs from clusters
+5) Scan cwms over input sequence, extract high scoring subsequences - these serve as official predictions
+
+Find functions that execute these steps:
+'''
 
 logger = logging.getLogger(__name__)
 logger.addHandler(logging.NullHandler())
@@ -87,6 +97,7 @@ def get_nonredundant_example_idx(ranges, width=200):
 
 # --------------------------------------------
 @gin.configurable
+# Question: What are TfModiscoWorkflow objects?
 def modisco_run(output_path,  # specified by bpnet_modisco_run
                 task_names,
                 contrib_scores,
@@ -480,6 +491,8 @@ def cwm_scan_seqlets(modisco_dir,
 
     dfi_list = []
 
+    # Extracts seqlets and then scans CWM over them
+    # Then saves the highest scoring -> I'm not sure though
     for pattern_name in tqdm(mf.pattern_names()):
         pattern = mf.get_pattern(pattern_name).trim_seq_ic(trim_frac)
         seqlets = mf._get_seqlets(pattern_name, trim_frac=trim_frac)
