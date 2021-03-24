@@ -72,6 +72,10 @@ def bpnet_model(tasks,
       bpnet.seqmodel.SeqModel
     """
     from bpnet.seqmodel import SeqModel
+    # In here they import the DilatedConv1D class from /BPNet/layers.py
+    # So essentially they define their own kind of dilated convolution layer
+    # which is really made up of 1 regular keras convolutional layer and several
+    # dilated ones(specified in this class)
     from bpnet.layers import DilatedConv1D, DeConv1D, GlobalAvgPoolFCN, MovingAverages
     from bpnet.metrics import BPNetMetricSingleProfile, default_peak_pred_metric
     from bpnet.heads import ScalarHead, ProfileHead
@@ -168,6 +172,11 @@ def bpnet_model(tasks,
                                 metric=ClassificationMetrics(),
                                 ))
     # -------------------------------------------------
+    # They create the entire model, with the body and 4 output heads.
+    # The body has n_dil_layers + 1 number of layers,
+    # in which the first layer is a convolutional layer and the next
+    # n_dil_layers layers are dilated.
+    # They use adam optimizer and input the transcription factors 
     m = SeqModel(
         body=DilatedConv1D(filters=filters,
                            conv1_kernel_size=conv1_kernel_size,

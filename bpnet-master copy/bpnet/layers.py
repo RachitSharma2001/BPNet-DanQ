@@ -114,11 +114,13 @@ class DilatedConv1D:
     def __call__(self, inp):
         """inp = (None, 4)
         """
+        # First convolutional layer is a regular convolutional layer
+        # Used from keras.layers
         first_conv = kl.Conv1D(self.filters,
                                kernel_size=self.conv1_kernel_size,
                                padding='same', # Padding added so output size = input size
                                activation='relu')(inp)
-        # pointwise: option to add a 1by1 conv right after the first conv 
+        # pointwise: option to add a 1by1 conv right after the first conv
         if self.add_pointwise:
             if self.batchnorm:
                 first_conv = kl.BatchNormalization()(first_conv)
@@ -128,8 +130,12 @@ class DilatedConv1D:
                                    activation='relu')(first_conv)
 
         prev_layer = first_conv
+        # They add their dilated layeres
+        # One thing we could maybe do is we could replace this for loop
+        # with code for a keras LSTM or RNN which acts on the output of
+        # first_conv - it will be interesting to see the performance differences 
         for i in range(1, self.n_dil_layers + 1):
-            
+
 
             if self.batchnorm: # Helps with exploding gradient problem
                 x = kl.BatchNormalization()(prev_layer)
@@ -143,14 +149,20 @@ class DilatedConv1D:
                 """
             else:
                 x = prev_layer
-            
+
             # Add next conv layer
+            # ah - so conv1d has an option "dilation-rate" which allows the convolutional layer
+            # to be a dilated layer as the filters skip over values
+            # notice that their dilated layers have larger and large filters in each successive layer
+            # the reason they do this is that as you go through more and more convolutional layers
+            # there will be more and more outputs and thus to keep memory down the dilated layers
+            # need to be larger and larger to make less outputs and avoid exponential memory costs
             conv_output = kl.Conv1D(self.filters, kernel_size=3, padding='same',
                                     activation='relu', dilation_rate=2**i
                                     # pass in dilation rate 2, 4, 8 ...
                                     )(x)
             # ?? There would be a lot of padding in the higher level layers when
-            # dilation rate is something like 2 ^ 7 
+            # dilation rate is something like 2 ^ 7
 
             # skip connections
             if self.skip_type is None: # no skips
@@ -165,7 +177,7 @@ class DilatedConv1D:
                 raise ValueError("skip_type needs to be 'add' or 'concat' or None")
 
         combined_conv = prev_layer
-        
+
         # ?? What is happening here
         if self.padding == 'valid':
             # Trim the output to only valid sizes
@@ -195,7 +207,7 @@ class DilatedConv1D:
                 d -= 2 * dillation
             return d
 
-
+# Here they define the general framework for their deconvolutiona layer that the output heads have
 @gin.configurable
 class DeConv1D:
     def __init__(self, filters, n_tasks,
