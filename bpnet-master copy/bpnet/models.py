@@ -105,6 +105,8 @@ def bpnet_model(tasks,
     # Heads -------------------------------------------------
     heads = []
     # Profile prediction
+    # here they create the head, which consists of the Deconvolutional layer they defined in layers.py
+    # as well as a pooling then dense layer
     if p_loss_weight > 0:
         if not merge_profile_reg:
             heads.append(ProfileHead(target_name='{task}/profile',
@@ -176,7 +178,7 @@ def bpnet_model(tasks,
     # The body has n_dil_layers + 1 number of layers,
     # in which the first layer is a convolutional layer and the next
     # n_dil_layers layers are dilated.
-    # They use adam optimizer and input the transcription factors 
+    # They use adam optimizer and input the transcription factors
     m = SeqModel(
         body=DilatedConv1D(filters=filters,
                            conv1_kernel_size=conv1_kernel_size,

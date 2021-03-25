@@ -133,7 +133,7 @@ class DilatedConv1D:
         # They add their dilated layeres
         # One thing we could maybe do is we could replace this for loop
         # with code for a keras LSTM or RNN which acts on the output of
-        # first_conv - it will be interesting to see the performance differences 
+        # first_conv - it will be interesting to see the performance differences
         for i in range(1, self.n_dil_layers + 1):
 
 
@@ -237,6 +237,8 @@ class DeConv1D:
         x = kl.Reshape((-1, 1, self.filters))(x)
         if self.batchnorm:
             x = kl.BatchNormalization()(x)
+        # So it seems like they have a transpose layer rather than a deconvolutional layer
+        # So when they refer to deconvolutional layer, are they really meaning transposed convolution?
         x = kl.Conv2DTranspose(self.n_tasks, kernel_size=(self.tconv_kernel_size, 1), padding='same')(x)
         x = kl.Reshape((-1, self.n_tasks))(x)
 
