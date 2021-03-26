@@ -69,7 +69,7 @@ class SeqModelTrainer:
           train_batch_sampler: batch Sampler for training. Useful for say Stratified sampling
           tensorboard: if True, tensorboard output will be added
         """
-
+        # Get iterators for train and valid data
         if train_batch_sampler is not None:
             train_it = self.train_dataset.batch_train_iter(shuffle=False,
                                                            batch_size=1,
@@ -113,6 +113,7 @@ class SeqModelTrainer:
         else:
             validation_steps = max(int(validation_samples / batch_size), 1)
 
+        # Use keras.Model.fit_generator and pass in iterators 
         self.model.fit_generator(
             train_it,
             epochs=epochs,
@@ -120,14 +121,14 @@ class SeqModelTrainer:
             validation_data=valid_it,
             validation_steps=validation_steps,
             callbacks=[
-                EarlyStopping(
-                    patience=early_stop_patience,
+                EarlyStopping( # early stopping when metrics do not improve
+                    patience=early_stop_patience, # how long to wait
                     restore_best_weights=True
                 ),
                 CSVLogger(self.history_path)
-            ] + tb + wcp
+            ] + tb + wcp # extra callbacks: wandb, tensorboard (for monitoring)
         )
-        self.model.save(self.ckp_file)
+        self.model.save(self.ckp_file) # save model as h5 file
 
         # log metrics from the best epoch
         try:
@@ -180,6 +181,8 @@ class SeqModelTrainer:
                 raise ValueError("Valid dataset needs to be a list of tuples of 2 or 3 elements"
                                  "(name, dataset) or (name, dataset, metric)")
             logger.info(f"Evaluating dataset: {dataset_name}")
+
+            # Use evaluate function implemented in seqmodel.py
             metric_res[dataset_name] = self.seq_model.evaluate(dataset,
                                                                eval_metric=eval_metric,
                                                                num_workers=num_workers,
