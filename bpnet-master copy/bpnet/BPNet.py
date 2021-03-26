@@ -20,6 +20,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import tensorflow as tf
 from genomelake.extractors import BigwigExtractor
+#^not sure what this is
 import pyBigWig
 import logging
 logger = logging.getLogger(__name__)
@@ -85,6 +86,7 @@ class BPNetSeqModel:
         return {task: preds[f'{task}/profile'] * np.exp(preds[f'{task}/counts'][:, np.newaxis])
                 for task in self.seqmodel.tasks}
 
+    
     def contrib_score_all(self, seq, method='deeplift', aggregate_strand=True, batch_size=512,
                           pred_summaries=['profile/wn', 'counts/pre-act']):
         """Compute all contribution scores
@@ -179,7 +181,7 @@ class BPNetSeqModel:
 
     # Method used to predict tf binding sites and then calculate contribution scores - you would use this after fully training the model
     # Questions: Where do they load the model that will do the predicting? - probably  the methods they call do this
-    #
+    # Is preds a dictionary?
     def predict_all(self, seq, contrib_method='grad', batch_size=512, pred_summaries=['profile/wn', 'counts/pre-act']):
         """Make model prediction based
         """
@@ -319,7 +321,7 @@ class BPNetSeqModel:
                               legend=True)
             figs.append(fig)
         return figs
-
+    
     def export_bw(self,
                   regions,
                   output_prefix,
