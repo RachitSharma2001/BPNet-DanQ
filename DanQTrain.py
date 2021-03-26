@@ -112,6 +112,8 @@ model.add(Activation('relu'))
 model.add(Dense(input_dim=925, output_dim=919))
 # Take the 919 matrix and on each individual cell apply
 # Sigmoid(x) = 1/(1+e^-x)
+#^ is this the default sigmoid equation?`
+
 model.add(Activation('sigmoid'))
 
 print 'compiling model'
